@@ -27,6 +27,17 @@ function getLocalDateValue() {
   return `${year}-${month}-${day}`
 }
 
+function getFirstName(userMetadata: Record<string, unknown>) {
+  const value = userMetadata.first_name ?? userMetadata.given_name ?? userMetadata.full_name ?? userMetadata.name
+  return typeof value === 'string' && value.trim() ? value.trim().split(/\s+/)[0] : null
+}
+
+function formatCompactMonth(monthValue: string) {
+  const [year, month] = monthValue.split('-').map(Number)
+  const labels = ['Ene.', 'Feb.', 'Mar.', 'Abr.', 'May.', 'Jun.', 'Jul.', 'Ago.', 'Sep.', 'Oct.', 'Nov.', 'Dic.']
+  return `${labels[month - 1] ?? ''} ${year}`
+}
+
 const navItems: { id: Section; label: string; icon: IconName }[] = [
   { id: 'inicio', label: 'Inicio', icon: 'home' },
   { id: 'movimientos', label: 'Movimientos', icon: 'movement' },
@@ -98,10 +109,10 @@ function App() {
   if (authLoading && isSupabaseConfigured) return <main className="auth-page"><p className="auth-loading">Cargando Dinero Libre…</p></main>
   if (!isOnline) return <main className="auth-page"><section className="offline-card"><span aria-hidden="true">⌁</span><h1>Sin conexión</h1><p>Conéctate a internet para consultar datos financieros actualizados.</p></section></main>
   if (!session) return <AuthScreen />
-  return <Dashboard key={session.user.id} userId={session.user.id} userEmail={session.user.email ?? 'Usuario'} />
+  return <Dashboard key={session.user.id} userId={session.user.id} userEmail={session.user.email ?? 'Usuario'} userFirstName={getFirstName(session.user.user_metadata)} />
 }
 
-function Dashboard({ userId, userEmail }: { userId: string; userEmail: string }) {
+function Dashboard({ userId, userEmail, userFirstName }: { userId: string; userEmail: string; userFirstName: string | null }) {
   const [section, setSection] = useState<Section>('inicio')
   const [formOpen, setFormOpen] = useState(false)
   const [transactionNotice, setTransactionNotice] = useState<string | null>(null)
@@ -168,7 +179,7 @@ function Dashboard({ userId, userEmail }: { userId: string; userEmail: string })
       </aside>
 
       <main className="main-content">
-        {section === 'inicio' ? <Home userEmail={userEmail} spaces={spaces} transactions={transactions} budget={budget} summary={monthlySummary} freeMoney={freeMoney} userId={userId} month={selectedMonth} onMonthChange={setSelectedMonth} notice={transactionNotice} onUpdate={updateTransaction} onDelete={deleteTransaction} onOpenForm={openForm} onRetryFinancialData={() => { transactions.refresh(); recurringExpenses.refresh(); monthlySavings.refresh() }} /> : section === 'movimientos' ? <MovementsSection transactions={transactions} userId={userId} notice={transactionNotice} onUpdate={updateTransaction} onDelete={deleteTransaction} onOpenForm={openForm} /> : section === 'planificacion' ? <PlanningSection transactions={transactions} budget={budget} recurringExpenses={recurringExpenses} monthlySavings={monthlySavings} month={selectedMonth} onMonthChange={setSelectedMonth} /> : section === 'configuracion' ? <SpacesPanel userId={userId} spaces={spaces.spaces} selectedSpace={spaces.selectedSpace} isLoading={spaces.isLoading} error={spaces.error} onRetry={spaces.retry} onSelectSpace={spaces.selectSpace} onSignOut={signOut} /> : <EmptySection section={section} onOpenForm={openForm} onSignOut={signOut} />}
+        {section === 'inicio' ? <Home userFirstName={userFirstName} spaces={spaces} transactions={transactions} budget={budget} summary={monthlySummary} freeMoney={freeMoney} userId={userId} month={selectedMonth} onMonthChange={setSelectedMonth} notice={transactionNotice} onUpdate={updateTransaction} onDelete={deleteTransaction} onOpenForm={openForm} onRetryFinancialData={() => { transactions.refresh(); recurringExpenses.refresh(); monthlySavings.refresh() }} /> : section === 'movimientos' ? <MovementsSection transactions={transactions} userId={userId} notice={transactionNotice} onUpdate={updateTransaction} onDelete={deleteTransaction} onOpenForm={openForm} /> : section === 'planificacion' ? <PlanningSection transactions={transactions} budget={budget} recurringExpenses={recurringExpenses} monthlySavings={monthlySavings} month={selectedMonth} onMonthChange={setSelectedMonth} /> : section === 'configuracion' ? <SpacesPanel userId={userId} spaces={spaces.spaces} selectedSpace={spaces.selectedSpace} isLoading={spaces.isLoading} error={spaces.error} onRetry={spaces.retry} onSelectSpace={spaces.selectSpace} onSignOut={signOut} /> : <EmptySection section={section} onOpenForm={openForm} onSignOut={signOut} />}
       </main>
 
       <button className="floating-add" onClick={openForm} aria-label="Registrar movimiento"><Icon name="plus" size={25} /></button>
@@ -182,10 +193,10 @@ function NavButton({ item, active, onClick }: { item: { id: Section; label: stri
   return <button className={`nav-button ${active ? 'active' : ''}`} onClick={onClick}><Icon name={item.icon} /><span>{item.label}</span></button>
 }
 
-function Home({ userEmail, spaces, transactions, budget, summary, freeMoney, userId, month, onMonthChange, notice, onUpdate, onDelete, onOpenForm, onRetryFinancialData }: { userEmail: string; spaces: ReturnType<typeof useSpaces>; transactions: ReturnType<typeof useTransactions>; budget: ReturnType<typeof useBudget>; summary: ReturnType<typeof summarizeMonth>; freeMoney: ReturnType<typeof useFreeMoney>; userId: string; month: string; onMonthChange: (month: string) => void; notice: string | null; onUpdate: ReturnType<typeof useTransactions>['updateTransaction']; onDelete: ReturnType<typeof useTransactions>['deleteTransaction']; onOpenForm: () => void; onRetryFinancialData: () => void }) {
+function Home({ userFirstName, spaces, transactions, budget, summary, freeMoney, userId, month, onMonthChange, notice, onUpdate, onDelete, onOpenForm, onRetryFinancialData }: { userFirstName: string | null; spaces: ReturnType<typeof useSpaces>; transactions: ReturnType<typeof useTransactions>; budget: ReturnType<typeof useBudget>; summary: ReturnType<typeof summarizeMonth>; freeMoney: ReturnType<typeof useFreeMoney>; userId: string; month: string; onMonthChange: (month: string) => void; notice: string | null; onUpdate: ReturnType<typeof useTransactions>['updateTransaction']; onDelete: ReturnType<typeof useTransactions>['deleteTransaction']; onOpenForm: () => void; onRetryFinancialData: () => void }) {
   const budgetProgress = budget.budget ? calculateBudgetProgress(budget.budget.amount, summary.expenseCents) : null
   return <>
-    <header className="page-header"><div><p className="eyebrow">RESUMEN FINANCIERO</p><h1>Hola, {userEmail} <span>👋</span></h1></div><div className="header-selectors"><MonthSelector month={month} onChange={onMonthChange} /><SpaceSelector spaces={spaces} /></div></header>
+    <header className="page-header"><div><p className="eyebrow">RESUMEN FINANCIERO</p><h1>{userFirstName ? `Hola, ${userFirstName}` : '¡Hola'} <span>👋</span></h1></div><div className="header-selectors"><MonthSelector month={month} onChange={onMonthChange} /><SpaceSelector spaces={spaces} /></div></header>
     <MonthlySummary summary={summary} freeMoney={freeMoney} onRetry={onRetryFinancialData} />
     <section className="section-block budget-section"><div className="section-heading"><div><p className="eyebrow">PRESUPUESTO GLOBAL</p><h2>Presupuesto</h2></div></div><BudgetPanel budgetAmount={budget.budget?.amount ?? null} progress={budgetProgress} isLoading={budget.isLoading || transactions.isLoading} error={budget.error} onRetry={budget.refresh} onSave={budget.saveBudget} onDelete={budget.deleteBudget} /></section>
     <section className="section-block"><div className="section-heading"><div><p className="eyebrow">DATOS REALES DEL ESPACIO</p><h2>Movimientos recientes</h2></div></div><TransactionContent transactions={transactions} userId={userId} limit={4} editable={false} onUpdate={onUpdate} onDelete={onDelete} />{notice && <p className="transaction-state success" role="status">{notice}</p>}</section>
@@ -200,7 +211,7 @@ function PlanningSection({ transactions, budget, recurringExpenses, monthlySavin
 }
 
 function MonthSelector({ month, onChange }: { month: string; onChange: (month: string) => void }) {
-  return <label className="month-select"><span className="sr-only">Mes del resumen</span><input type="month" value={month} onChange={(event) => onChange(event.target.value)} /></label>
+  return <label className="month-select"><span className="sr-only">Mes del resumen</span><span className="month-select-compact" aria-hidden="true">{formatCompactMonth(month)}</span><input type="month" value={month} onChange={(event) => onChange(event.target.value)} /></label>
 }
 
 function MonthlySummary({ summary, freeMoney, onRetry }: { summary: ReturnType<typeof summarizeMonth>; freeMoney: ReturnType<typeof useFreeMoney>; onRetry: () => void }) {

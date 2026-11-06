@@ -1,8 +1,8 @@
 # Dinero Libre
 
-Aplicación web de finanzas personales y compartidas para registrar movimientos, organizar obligaciones mensuales y entender la disponibilidad estimada de cada período.
+Dinero Libre es una PWA para administrar finanzas personales y compartidas: registra ingresos y gastos, organiza presupuestos, obligaciones recurrentes y reservas de ahorro, y muestra la disponibilidad mensual estimada de cada espacio.
 
-**Demo:** [lively-fairy-12efda.netlify.app](https://lively-fairy-12efda.netlify.app)
+**Probar la aplicación:** [https://dinero-libre.pages.dev](https://dinero-libre.pages.dev)
 
 ## Problema que resuelve
 

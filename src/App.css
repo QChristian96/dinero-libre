@@ -97,4 +97,19 @@ h1, h2, p { margin-top: 0; } h1 { margin-bottom: 0; font-size: 28px; letter-spac
   .selected-space { align-items: flex-start; flex-direction: column; gap: 4px; }
   .form-actions { flex-wrap: wrap; }
   .form-actions button { flex: 1 1 130px; }
+
+  /* Safari/iOS aplica autozoom al enfocar controles editables menores a 16px. */
+  .auth-form input,
+  .month-select input,
+  .space-select select,
+  .spaces-card input,
+  .spaces-current select,
+  .movement-modal input,
+  .movement-modal select,
+  .budget-form input,
+  .recurring-form input,
+  .payment-link select,
+  .savings-form input,
+  .transaction-edit input,
+  .transaction-edit select { font-size: 16px; }
 }

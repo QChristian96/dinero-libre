@@ -115,3 +115,54 @@ h1, h2, p { margin-top: 0; } h1 { margin-bottom: 0; font-size: 28px; letter-spac
   .transaction-edit input,
   .transaction-edit select { font-size: 16px; }
 }
+
+/* Registro por lote de obligaciones recurrentes (migración 007). */
+.recurring-main { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.recurring-info { min-width: 0; }
+.recurring-check { display: grid; place-items: center; flex: 0 0 auto; width: 30px; height: 30px; border: 1px solid #cfdcd4; border-radius: 8px; background: #fff; cursor: pointer; }
+.recurring-check input { width: 18px; height: 18px; margin: 0; accent-color: #266c53; cursor: pointer; }
+.recurring-check:focus-within { border-color: #4a9876; box-shadow: 0 0 0 3px #4a987622; }
+.recurring-card.selected { border-color: #7fb698; background: #f6fbf7; box-shadow: 0 0 0 1px #7fb698 inset; }
+.recurring-mode { display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 5px; color: #4d6559; background: #eaf1ec; font-size: 9px; font-style: normal; font-weight: 800; letter-spacing: .02em; vertical-align: middle; }
+.recurring-mode.variable { color: #765d18; background: #fff4d9; }
+.recurring-amount { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.recurring-amount b { color: #294d40; font-size: 13px; overflow-wrap: anywhere; text-align: right; }
+.recurring-amount small { color: #7b8881; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.review-payments { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid #266c53; border-radius: 10px; padding: 12px; color: #fff; background: #266c53; font-size: 13px; font-weight: 800; }
+.review-payments:disabled { cursor: not-allowed; opacity: .62; }
+.payment-review { margin-top: 16px; padding: 15px; border: 1px solid #dbe5de; border-radius: 12px; background: #f8fbf8; }
+.payment-review-list { display: grid; gap: 10px; }
+.payment-review-intro { margin: -4px 0 14px; color: #718078; font-size: 12px; line-height: 1.45; }
+.payment-review-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; border: 1px solid #e1e8e3; border-radius: 10px; background: #fff; }
+.payment-review-head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.payment-review-head strong { font-size: 13px; overflow-wrap: anywhere; }
+.payment-review-head .recurring-mode { margin-left: 0; }
+.payment-review-row label { display: grid; gap: 5px; min-width: 0; color: #536159; font-size: 11px; font-weight: 800; }
+.payment-review-row input,
+.payment-review-row select { width: 100%; min-width: 0; border: 1px solid #d9e2dc; border-radius: 8px; padding: 9px; background: #fff; color: #263c32; outline: 0; font-size: 12px; }
+.payment-review-row input:focus,
+.payment-review-row select:focus { border-color: #4a9876; box-shadow: 0 0 0 3px #4a987622; }
+.payment-review-row input:disabled { color: #5f6c65; background: #eef3f0; }
+.payment-review-row small { color: #718078; font-size: 10px; font-weight: 500; }
+.payment-review-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 13px; }
+.payment-review-actions .review-payments { width: auto; flex: 1 1 230px; margin-top: 0; }
+.amount-mode { display: grid; gap: 6px; color: #536159; font-size: 11px; font-weight: 800; }
+.amount-mode select,
+.recurring-form select { width: 100%; border: 1px solid #d9e2dc; border-radius: 7px; padding: 9px; background: #fff; color: #263c32; outline: 0; font-size: 12px; }
+.amount-mode select:focus,
+.recurring-form select:focus { border-color: #4a9876; box-shadow: 0 0 0 3px #4a987622; }
+.text-button:disabled { cursor: not-allowed; opacity: .55; }
+
+@media (max-width: 540px) {
+  .recurring-actions .text-button { min-height: 38px; }
+  .recurring-check { width: 38px; height: 38px; }
+  .recurring-check input { width: 22px; height: 22px; }
+  .payment-review { padding: 12px; }
+  .payment-review-row { grid-template-columns: 1fr; padding: 11px; }
+  .payment-review-actions { flex-direction: column-reverse; align-items: stretch; }
+  .payment-review-actions .review-payments { width: 100%; flex-basis: auto; }
+  .payment-review-row input,
+  .payment-review-row select,
+  .amount-mode select,
+  .recurring-form select { font-size: 16px; }
+}

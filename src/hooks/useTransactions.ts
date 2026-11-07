@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { fetchAllTransactionPages } from '../lib/transactionPagination'
 
 export type TransactionType = 'income' | 'expense'
 
-export type Category = {
-  id: string
-  name: string
-  transaction_type: TransactionType
-}
+export type Category = { id: string; name: string; transaction_type: TransactionType }
 
 export type FinancialTransaction = {
   id: string
@@ -23,78 +19,62 @@ export type FinancialTransaction = {
   categories: { name: string } | null
 }
 
-export type TransactionInput = Pick<FinancialTransaction, 'transaction_type' | 'amount' | 'category_id' | 'description' | 'occurred_on'> & {
-  idempotency_key: string
-}
+export type TransactionInput = Pick<FinancialTransaction, 'transaction_type' | 'amount' | 'category_id' | 'description' | 'occurred_on'> & { idempotency_key: string }
 
-type TransactionState = {
-  spaceId: string | null
-  categories: Category[]
-  transactions: FinancialTransaction[]
-  isLoading: boolean
-  error: string | null
-}
+type TransactionState = { spaceId: string | null; categories: Category[]; transactions: FinancialTransaction[]; isLoading: boolean; error: string | null }
 
 export function useTransactions(spaceId: string | null, periodKey = '') {
   const [state, setState] = useState<TransactionState>({ spaceId: null, categories: [], transactions: [], isLoading: true, error: null })
-  const [requestVersion, setRequestVersion] = useState(0)
+  const requestRef = useRef(0)
 
-  useEffect(() => {
-    let active = true
+  const reload = useCallback(async () => {
+    // El período forma parte de la clave de recarga aunque el filtrado se hace
+    // sobre el resumen mensual en el cliente.
+    void periodKey
+    const requestId = ++requestRef.current
+    const isCurrent = () => requestId === requestRef.current
 
-    const load = async () => {
-      if (!spaceId) {
-        if (active) setState({ spaceId: null, categories: [], transactions: [], isLoading: false, error: null })
-        return
-      }
+    if (!spaceId) {
+      if (isCurrent()) setState({ spaceId: null, categories: [], transactions: [], isLoading: false, error: null })
+      return false
+    }
+    if (!supabase) {
+      if (isCurrent()) setState({ spaceId, categories: [], transactions: [], isLoading: false, error: 'No se pudo conectar con Supabase.' })
+      return false
+    }
 
-      if (!supabase) {
-        if (active) setState({ spaceId, categories: [], transactions: [], isLoading: false, error: 'No se pudo conectar con Supabase.' })
-        return
-      }
-      const client = supabase
-
-      if (active) setState((current) => ({ ...current, spaceId, transactions: [], isLoading: true, error: null }))
-      const categoriesPromise = client.from('categories').select('id, name, transaction_type').order('name')
-      let transactionData
-      try {
-        transactionData = await fetchAllTransactionPages(
-          async (from, to, includeCount) => await client.from('transactions').select('id, space_id, created_by, transaction_type, amount, category_id, description, occurred_on, created_at, categories(name)', { count: includeCount ? 'exact' : undefined }).eq('space_id', spaceId).order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to),
-          () => active,
-        )
-      } catch {
-        if (active) setState((current) => ({ ...current, spaceId, transactions: [], isLoading: false, error: 'No pudimos cargar los movimientos de este espacio. Inténtalo nuevamente.' }))
-        return
-      }
+    const client = supabase
+    setState((current) => ({ ...current, spaceId, transactions: [], isLoading: true, error: null }))
+    const categoriesPromise = client.from('categories').select('id, name, transaction_type').order('name')
+    try {
+      const transactionData = await fetchAllTransactionPages(
+        async (from, to, includeCount) => await client.from('transactions').select('id, space_id, created_by, transaction_type, amount, category_id, description, occurred_on, created_at, categories(name)', { count: includeCount ? 'exact' : undefined }).eq('space_id', spaceId).order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to),
+        isCurrent,
+      )
       const categoriesResult = await categoriesPromise
-
-      if (!active) return
+      if (!isCurrent()) return false
       if (categoriesResult.error || transactionData === null) {
         setState((current) => ({ ...current, spaceId, transactions: [], isLoading: false, error: 'No pudimos cargar los movimientos de este espacio. Inténtalo nuevamente.' }))
-        return
+        return false
       }
 
       const rawTransactions = transactionData as Array<Omit<FinancialTransaction, 'categories'> & { categories: { name: string }[] | null }>
-      const transactions = rawTransactions.map((transaction) => ({
-        ...transaction,
-        categories: Array.isArray(transaction.categories) ? transaction.categories[0] ?? null : transaction.categories,
-      }))
-
-      setState({
-        spaceId,
-        categories: (categoriesResult.data ?? []) as Category[],
-        transactions,
-        isLoading: false,
-        error: null,
-      })
+      const transactions = rawTransactions.map((transaction) => ({ ...transaction, categories: Array.isArray(transaction.categories) ? transaction.categories[0] ?? null : transaction.categories }))
+      setState({ spaceId, categories: (categoriesResult.data ?? []) as Category[], transactions, isLoading: false, error: null })
+      return true
+    } catch {
+      if (isCurrent()) setState((current) => ({ ...current, spaceId, transactions: [], isLoading: false, error: 'No pudimos cargar los movimientos de este espacio. Inténtalo nuevamente.' }))
+      return false
     }
+  }, [periodKey, spaceId])
 
-    void load()
-    return () => { active = false }
-  }, [periodKey, requestVersion, spaceId])
+  useEffect(() => {
+    const load = () => { void reload() }
+    load()
+    return () => { requestRef.current += 1 }
+  }, [reload])
 
-  const refresh = useCallback(() => setRequestVersion((version) => version + 1), [])
-
+  const refresh = useCallback(() => { void reload() }, [reload])
   const createTransaction = useCallback(async (input: TransactionInput) => {
     if (!supabase || !spaceId) return 'Selecciona un espacio antes de registrar un movimiento.'
     const { error } = await supabase.from('transactions').insert({ space_id: spaceId, ...input })
@@ -120,5 +100,5 @@ export function useTransactions(spaceId: string | null, periodKey = '') {
   }, [refresh])
 
   const isCurrentSpace = state.spaceId === spaceId
-  return { ...state, transactions: isCurrentSpace ? state.transactions : [], isLoading: state.isLoading || !isCurrentSpace, refresh, createTransaction, updateTransaction, deleteTransaction }
+  return { ...state, transactions: isCurrentSpace ? state.transactions : [], isLoading: state.isLoading || !isCurrentSpace, refresh, reload, createTransaction, updateTransaction, deleteTransaction }
 }
